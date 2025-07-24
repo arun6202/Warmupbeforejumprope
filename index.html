@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre-Jump Rope Warm-Up</title>
+    <style>
+        :root { --progress: 0deg; }
+        body {
+            background-color: peachpuff;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        #workout-container {
+            background-color: white;
+            padding: 2em;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+        #prompt-box {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translate(-50%, 0);
+            background-color: #2196f3;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: bold;
+            z-index: 10;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        #prompt-box.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        #transition-break {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translate(-50%, 0);
+            background-color: #ff9800;
+            color: white;
+            padding: 14px 40px;
+            border-radius: 10px;
+            font-size: 1.4em;
+            font-weight: bold;
+            z-index: 9;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s, visibility 0.4s;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        #transition-break.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        #exercise-name {
+            font-size: 2em;
+            font-weight: bold;
+            color: #d9534f;
+            min-height: 60px;
+        }
+        #timer, #reps {
+            font-size: 3em;
+            color: #5cb85c;
+            margin: 0.5em 0;
+        }
+        #total-duration {
+            font-size: 1em;
+            color: #777;
+        }
+        .progress-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: conic-gradient(#5cb85c var(--progress), #e6e6e6 0deg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 1em auto;
+            position: relative;
+            transition: background 0.3s;
+        }
+        .progress-circle::before {
+            content: '';
+            position: absolute;
+            width: 85%;
+            height: 85%;
+            background: white;
+            border-radius: 50%;
+        }
+        .progress-value {
+            position: relative;
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+        .controls button {
+            background-color: #5bc0de;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+        .controls button:hover {
+            background-color: #31b0d5;
+        }
+        .controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="workout-container">
+        <div id="prompt-box"></div>
+        <div id="transition-break">Transition Break</div>
+        <h1>Pre-Jump Rope Warm-Up</h1>
+        <div class="progress-circle">
+            <div class="progress-value">0%</div>
+        </div>
+        <div id="exercise-name">Get Ready!</div>
+        <div id="timer">00:00</div>
+        <div id="reps"></div>
+        <div id="total-duration">Total Time: 00:00</div>
+        <div class="controls">
+            <button id="startBtn">Start</button>
+            <button id="pauseBtn" disabled>Pause</button>
+            <button id="resumeBtn" disabled>Resume</button>
+            <button id="skipBtn" disabled>Skip</button>
+            <button id="prevBtn" disabled>Previous</button>
+            <button id="resetBtn" disabled>Reset</button>
+        </div>
+    </div>
+
+    <audio id="bell" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae3c8.mp3"></audio>
+
+    <script>
+        // Exercise definitions
+        const exercises = [
+            {
+                name: "Arm Circles",
+                type: "time",
+                duration: 20,
+                cues: [
+                    { at: 10, text: "Change direction", pause: true }
+                ],
+                intro: "Let's start with exercise one. Arm circles. 10 seconds forward, 10 seconds backward. 20 seconds."
+            },
+            {
+                name: "Neck Rolls",
+                type: "time",
+                duration: 10,
+                cues: [
+                    { at: 5, text: "Switch direction", pause: true }
+                ],
+                intro: "Let's start with exercise two. Neck rolls. 10 seconds each direction. 10 seconds."
+            },
+            {
+                name: "Torso Twists",
+                type: "time",
+                duration: 20,
+                cues: [],
+                intro: "Let's start with exercise three. Torso twists. 20 seconds."
+            },
+            {
+                name: "Hip Circles",
+                type: "time",
+                duration: 40,
+                cues: [
+                    { at: 40, text: "Start with left leg", pause: true },
+                    { at: 30, text: "Switch direction", pause: true },
+                    { at: 20, text: "Switch to right leg", pause: true },
+                    { at: 10, text: "Switch direction", pause: true }
+                ],
+                intro: "Let's start with exercise four. Hip circles. 40 seconds."
+            },
+            {
+                name: "Leg Swings (Front to Back)",
+                type: "time",
+                duration: 30,
+                cues: [
+                    { at: 15, text: "Switch side", pause: true }
+                ],
+                intro: "Let's start with exercise five. Leg swings front to back. 30 seconds."
+            },
+            {
+                name: "Leg Swings (Side to Side)",
+                type: "time",
+                duration: 30,
+                cues: [
+                    { at: 15, text: "Switch side", pause: true }
+                ],
+                intro: "Let's start with exercise six. Leg swings side to side. 30 seconds."
+            },
+            {
+                name: "High Knees",
+                type: "time",
+                duration: 20,
+                cues: [],
+                intro: "Let's start with exercise seven. High knees. 20 seconds."
+            },
+            {
+                name: "Jumping Jacks",
+                type: "time",
+                duration: 20,
+                cues: [],
+                intro: "Let's start with exercise eight. Jumping jacks. 20 seconds."
+            },
+            {
+                name: "Wrist Rolls",
+                type: "time",
+                duration: 10,
+                cues: [
+                    { at: 5, text: "Switch direction", pause: false }
+                ],
+                intro: "Let's start with exercise nine. Wrist rolls. 10 seconds."
+            },
+            {
+                name: "Calf Raises",
+                type: "reps",
+                reps: 15,
+                intro: "Let's start with exercise ten. Calf raises. 15 reps."
+            },
+            {
+                name: "90/90 Hip Stretch",
+                type: "time",
+                duration: 20,
+                cues: [
+                    { at: 10, text: "Switch side", pause: true }
+                ],
+                intro: "Let's start with exercise eleven. 90 90 hip stretch. 10 seconds each side. 20 seconds."
+            },
+            {
+                name: "Ankle Rolls",
+                type: "time",
+                duration: 60,
+                cues: [
+                    { at: 60, text: "Start with left side", pause: true },
+                    { at: 45, text: "Switch direction", pause: true },
+                    { at: 30, text: "Switch to right side", pause: true },
+                    { at: 15, text: "Switch direction", pause: true }
+                ],
+                intro: "Let's start with exercise twelve. Ankle rolls. 60 seconds."
+            },
+            {
+                name: "Toe Walks",
+                type: "time",
+                duration: 20,
+                cues: [],
+                intro: "Let's start with exercise thirteen. Toe walks. 20 seconds."
+            },
+            {
+                name: "Heel Walks",
+                type: "time",
+                duration: 20,
+                cues: [],
+                intro: "Let's start with exercise fourteen. Heel walks. 20 seconds."
+            },
+            {
+                name: "Scapular Push-Ups",
+                type: "reps",
+                reps: 15,
+                intro: "Let's start with exercise fifteen. Scapular push-ups. 15 reps."
+            },
+            {
+                name: "Jump Rope Grip Squeeze",
+                type: "reps",
+                reps: 15,
+                intro: "Let's start with exercise sixteen. Jump rope grip squeeze. 15 reps."
+            }
+        ];
+
+        // DOM elements
+        const exerciseNameEl = document.getElementById('exercise-name');
+        const promptBoxEl = document.getElementById('prompt-box');
+        const transitionBreakEl = document.getElementById('transition-break');
+        const timerEl = document.getElementById('timer');
+        const repsEl = document.getElementById('reps');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const skipBtn = document.getElementById('skipBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const totalDurationEl = document.getElementById('total-duration');
+        const progressCircleEl = document.querySelector('.progress-circle');
+        const progressValueEl = document.querySelector('.progress-value');
+        const bell = document.getElementById('bell');
+
+        // State
+        let currentExerciseIndex = 0;
+        let timer;
+        let countdown;
+        let repCount;
+        let isPaused = false;
+        let isBreak = false;
+        let totalSeconds = 0;
+        let totalTimeInterval;
+        let wakeLock = null;
+        let awaitingSwitch = false;
+        let afterSwitchResume = null;
+        const synth = window.speechSynthesis;
+        let utterance;
+
+        // Utility
+        const requestWakeLock = async () => {
+            if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { } }
+        };
+        const releaseWakeLock = () => {
+            if (wakeLock !== null) { wakeLock.release().then(() => { wakeLock = null; }); }
+        };
+
+        function speak(text, continuous = false, onEndCallback = null) {
+            if (!synth) { if (onEndCallback) onEndCallback(); return; }
+            if (synth.speaking && !continuous) { synth.cancel(); }
+            utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.1;
+            if (onEndCallback) { utterance.onend = onEndCallback; }
+            synth.speak(utterance);
+        }
+
+        function showPrompt(text) {
+            promptBoxEl.textContent = text;
+            promptBoxEl.classList.add('visible');
+        }
+        function hidePrompt() {
+            promptBoxEl.classList.remove('visible');
+        }
+
+        function showTransitionBreak() {
+            transitionBreakEl.classList.add('visible');
+        }
+        function hideTransitionBreak() {
+            transitionBreakEl.classList.remove('visible');
+        }
+
+        function formatTime(seconds) {
+            if (typeof seconds !== "number" || isNaN(seconds) || seconds < 0) return "00:00";
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        function updateProgressBar() {
+            const totalExercises = exercises.length;
+            const progress = currentExerciseIndex >= totalExercises ? 100 : (currentExerciseIndex / totalExercises) * 100;
+            const degrees = (progress / 100) * 360;
+            progressValueEl.textContent = `${Math.round(progress)}%`;
+            progressCircleEl.style.setProperty('--progress', `${degrees}deg`);
+        }
+
+        function updateDisplay() {
+            const exercise = exercises[currentExerciseIndex];
+            if (isBreak) {
+                exerciseNameEl.textContent = "Break";
+                timerEl.textContent = formatTime(countdown);
+                repsEl.textContent = '';
+            } else if (exercise) {
+                exerciseNameEl.textContent = `Now: ${exercise.name}`;
+                if (exercise.type === 'time') {
+                    timerEl.textContent = formatTime(countdown);
+                    repsEl.textContent = '';
+                } else if (exercise.type === 'reps') {
+                    timerEl.textContent = '';
+                    repsEl.textContent = (typeof repCount === "number" && typeof exercise.reps === "number")
+                        ? `${repCount} / ${exercise.reps} reps`
+                        : `0 / ${exercise.reps || 0} reps`;
+                }
+            } else {
+                exerciseNameEl.textContent = "Get Ready!";
+                timerEl.textContent = "00:00";
+                repsEl.textContent = "";
+            }
+        }
+
+        function playBell() {
+            bell.currentTime = 0;
+            bell.play();
+        }
+
+        // Main logic
+        function startExercise() {
+            isBreak = false;
+            awaitingSwitch = false;
+            hidePrompt();
+            hideTransitionBreak();
+            updateProgressBar();
+            if (currentExerciseIndex >= exercises.length) {
+                exerciseNameEl.textContent = "Workout Complete!";
+                timerEl.textContent = '';
+                repsEl.textContent = '';
+                speak("Workout complete! Well done!");
+                pauseBtn.disabled = true; resumeBtn.disabled = true; skipBtn.disabled = true;
+                prevBtn.disabled = false; resetBtn.disabled = false;
+                clearInterval(totalTimeInterval);
+                releaseWakeLock();
+                return;
+            }
+            const exercise = exercises[currentExerciseIndex];
+            updateDisplay();
+
+            // Announce exercise
+            speak(exercise.intro, false, () => {
+                if (exercise.type === 'time') {
+                    startTimeExercise(exercise);
+                } else {
+                    startRepExercise(exercise);
+                }
+            });
+        }
+
+        function startTimeExercise(exercise) {
+            countdown = exercise.duration;
+            let cues = [...exercise.cues].sort((a, b) => b.at - a.at);
+            let cueIndex = 0;
+
+            function doCount() {
+                if (isPaused) return;
+                updateDisplay();
+                // Check for cue
+                if (cueIndex < cues.length && countdown === cues[cueIndex].at) {
+                    let cue = cues[cueIndex];
+                    cueIndex++;
+                    if (cue.pause) {
+                        clearInterval(timer);
+                        showPrompt(cue.text);
+                        speak(cue.text, false, () => {
+                            setTimeout(() => {
+                                hidePrompt();
+                                timer = setInterval(doCount, 1000);
+                            }, 800);
+                        });
+                        return;
+                    } else {
+                        showPrompt(cue.text);
+                        speak(cue.text, false, () => {
+                            setTimeout(() => {
+                                hidePrompt();
+                            }, 800);
+                        });
+                    }
+                }
+                // Count
+                if (countdown > 0) {
+                    timerEl.textContent = formatTime(countdown);
+                    speak(countdown.toString(), true);
+                    countdown--;
+                } else {
+                    clearInterval(timer);
+                    playBell();
+                    setTimeout(() => {
+                        speak("Exercise over.", false, () => {
+                            startBreak();
+                        });
+                    }, 800);
+                }
+            }
+            timer = setInterval(doCount, 1000);
+        }
+
+        function startRepExercise(exercise) {
+            repCount = 0;
+            updateDisplay();
+            function doRep() {
+                if (isPaused) return;
+                repCount++;
+                updateDisplay();
+                speak(repCount.toString(), true);
+                if (repCount >= exercise.reps) {
+                    clearInterval(timer);
+                    playBell();
+                    setTimeout(() => {
+                        speak("Exercise over.", false, () => {
+                            startBreak();
+                        });
+                    }, 800);
+                }
+            }
+            timer = setInterval(doRep, 2500);
+            doRep();
+        }
+
+        function startBreak() {
+            isBreak = true;
+            countdown = 5;
+            showPrompt("Have 5 seconds break");
+            showTransitionBreak();
+            speak("Have 5 seconds break.", false, () => {
+                hidePrompt();
+                let breakCount = countdown;
+                function breakTimer() {
+                    if (isPaused) return;
+                    timerEl.textContent = formatTime(breakCount);
+                    speak(breakCount.toString(), true);
+                    breakCount--;
+                    if (breakCount < 0) {
+                        clearInterval(timer);
+                        hideTransitionBreak();
+                        currentExerciseIndex++;
+                        setTimeout(startExercise, 600);
+                    }
+                }
+                timer = setInterval(breakTimer, 1000);
+                breakTimer();
+            });
+        }
+
+        // Controls
+        startBtn.addEventListener('click', () => {
+            requestWakeLock();
+            currentExerciseIndex = 0; totalSeconds = 0; isPaused = false;
+            startBtn.disabled = true; pauseBtn.disabled = false; skipBtn.disabled = false;
+            prevBtn.disabled = false; resetBtn.disabled = false;
+            timerEl.textContent = "00:00";
+            repsEl.textContent = "";
+            speak("Let us begin warm up before jump rope.", false, () => {
+                speak("Warm up before jump rope is very important.", false, () => {
+                    totalTimeInterval = setInterval(() => {
+                        if (!isPaused) {
+                            totalSeconds++;
+                            totalDurationEl.textContent = `Total Time: ${formatTime(totalSeconds)}`;
+                        }
+                    }, 1000);
+                    setTimeout(startExercise, 600);
+                });
+            });
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            isPaused = true; clearInterval(timer); synth.pause();
+            pauseBtn.disabled = true; resumeBtn.disabled = false;
+            releaseWakeLock();
+        });
+
+        resumeBtn.addEventListener('click', () => {
+            isPaused = false; requestWakeLock(); synth.resume();
+            pauseBtn.disabled = false; resumeBtn.disabled = true;
+            // Resume timer
+            const exercise = exercises[currentExerciseIndex];
+            if (isBreak) {
+                timer = setInterval(() => {
+                    timerEl.textContent = formatTime(countdown);
+                    if (countdown > 0) {
+                        speak(countdown.toString(), true);
+                        countdown--;
+                    } else {
+                        clearInterval(timer);
+                        hideTransitionBreak();
+                        currentExerciseIndex++;
+                        setTimeout(startExercise, 600);
+                    }
+                }, 1000);
+            } else if (exercise.type === 'time') {
+                timer = setInterval(() => {
+                    timerEl.textContent = formatTime(countdown);
+                    if (countdown > 0) {
+                        speak(countdown.toString(), true);
+                        countdown--;
+                    } else {
+                        clearInterval(timer);
+                        playBell();
+                        setTimeout(() => {
+                            speak("Exercise over.", false, () => {
+                                startBreak();
+                            });
+                        }, 800);
+                    }
+                }, 1000);
+            } else if (exercise.type === 'reps') {
+                timer = setInterval(() => {
+                    repCount++;
+                    updateDisplay();
+                    speak(repCount.toString(), true);
+                    if (repCount >= exercise.reps) {
+                        clearInterval(timer);
+                        playBell();
+                        setTimeout(() => {
+                            speak("Exercise over.", false, () => {
+                                startBreak();
+                            });
+                        }, 800);
+                    }
+                }, 2500);
+            }
+        });
+
+        skipBtn.addEventListener('click', () => {
+            clearInterval(timer); synth.cancel();
+            currentExerciseIndex++;
+            startExercise();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            clearInterval(timer); synth.cancel();
+            if (currentExerciseIndex > 0) { currentExerciseIndex--; }
+            else { currentExerciseIndex = 0; }
+            startExercise();
+        });
+
+        resetBtn.addEventListener('click', () => {
+            isPaused = true; clearInterval(timer); clearInterval(totalTimeInterval);
+            synth.cancel(); releaseWakeLock();
+            currentExerciseIndex = 0; totalSeconds = 0; isBreak = false;
+            exerciseNameEl.textContent = "Get Ready!";
+            timerEl.textContent = "00:00";
+            repsEl.textContent = "";
+            totalDurationEl.textContent = "Total Time: 00:00";
+            startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true;
+            skipBtn.disabled = true; prevBtn.disabled = true; resetBtn.disabled = true;
+            updateProgressBar();
+            hidePrompt();
+            hideTransitionBreak();
+        });
+
+        // Initial
+        timerEl.textContent = "00:00";
+        repsEl.textContent = "";
+        updateProgressBar();
+        hideTransitionBreak();
+    </script>
+
+</body>
+</html>
